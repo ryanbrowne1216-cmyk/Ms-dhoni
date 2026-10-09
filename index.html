@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080808">
+  <title>Video Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: #080808; color: #fff;
+      font-family: Arial, Helvetica, sans-serif; display: flex;
+      align-items: center; justify-content: center; padding: 18px;
+    }
+    .player-wrap { width: 100%; max-width: 1000px; }
+    .top { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .live-dot { width: 9px; height: 9px; border-radius: 50%; background: #e53935; }
+    h1 { font-size: 19px; margin: 0; font-weight: 700; letter-spacing: .2px; }
+    .screen { background: #000; border: 1px solid #292929; border-radius: 12px; overflow: hidden; }
+    video { display: block; width: 100%; max-height: 75vh; aspect-ratio: 16 / 9; background: #000; }
+    .status { color: #bdbdbd; font-size: 13px; line-height: 1.5; padding: 12px 2px 0; }
+    .status.error { color: #ff8a80; }
+  </style>
+</head>
+<body>
+  <main class="player-wrap">
+    <div class="top"><span class="live-dot"></span><h1>Video Player</h1></div>
+    <div class="screen">
+      <video id="video" controls playsinline preload="metadata"></video>
+    </div>
+    <div id="status" class="status">Loading video…</div>
+  </main>
+  <script>
+    const video = document.getElementById('video');
+    const status = document.getElementById('status');
+    // Keep master.m3u8 in the same folder as this index.html.
+    const streamUrl = new URL('./master.m3u8', window.location.href).href;
+
+    function showError(message) {
+      status.textContent = message;
+      status.classList.add('error');
+    }
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = streamUrl;
+      status.textContent = 'Ready. Press Play to start.';
+      video.addEventListener('error', () => showError('Could not load the stream. Check that master.m3u8 and all .ts files are uploaded.'));
+    } else if (window.Hls && Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        status.textContent = 'Ready. Press Play to start.';
+      });
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          showError('Stream failed to load. Check the uploaded M3U8 and TS files, and make sure the host serves .m3u8 and .ts files correctly.');
+          hls.destroy();
+        }
+      });
+    } else {
+      showError('This browser does not support HLS playback.');
+    }
+  </script>
+</body>
+</html>
